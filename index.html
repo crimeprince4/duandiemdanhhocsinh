@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Quản lý học sinh Realtime</title>
+
+<!-- Bootstrap 4 -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+<style>
+    body { padding: 25px; }
+    .student-card img {
+    	width: 90px;
+    	height: 90px;
+    	border-radius: 50%;
+    	object-fit: contain;
+    	background: #fff;
+    	padding: 5px;
+    }
+    .status-text {
+        font-size: 14px;
+        margin-top: 4px;
+        font-weight: 500;
+    }
+    .hidden { display: none !important; }
+</style>
+</head>
+
+<body class="bg-light">
+
+<div class="container">
+
+    <h3 class="text-center mb-4 font-weight-bold">Chọn vai trò</h3>
+
+    <div class="text-center mb-4">
+        <button class="btn btn-primary btn-lg mr-2" onclick="enterTeacher()">Giáo viên</button>
+        <button class="btn btn-success btn-lg" onclick="enterParent()">Phụ huynh</button>
+    </div>
+
+    <!-- Teacher Login -->
+    <div id="teacher-login" class="hidden text-center">
+        <h4>Nhập mật khẩu (1234)</h4>
+        <input id="pass" type="password" class="form-control w-50 mx-auto mt-2">
+        <button class="btn btn-dark mt-3" onclick="loginTeacher()">Vào</button>
+    </div>
+
+    <!-- Main App -->
+    <div id="main" class="hidden">
+        <h3 id="roleTitle" class="mb-4 text-center font-weight-bold"></h3>
+
+        <div id="studentList" class="row"></div>
+    </div>
+
+</div>
+
+
+<script>
+// Kết nối WebSocket PieSocket
+const ws = new WebSocket("wss://s15498.sgp1.piesocket.com/v3/1?api_key=okoWbl3aPzw8eI7MfLR3oktCFWVh2Bj4foB5EGnB&notify_self=1");
+
+ws.onopen = () => console.log("Đã kết nối WebSocket PieSocket");
+ws.onerror = e => console.log("WebSocket PieSocket lỗi:", e);
+ws.onmessage = e => {
+    try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === "update") handleIncoming(msg.student);
+    } catch (err) {
+        console.log("Lỗi xử lý dữ liệu WebSocket:", err);
+    }
+};
+
+
+// Tạo danh sách học sinh
+const students = [];
+for (let i = 1; i <= 10; i++) {
+    students.push({
+        id: i,
+        name: "HS " + i,
+        status: ""
+    });
+}
+
+let role = "";
+
+function enterTeacher() {
+    document.getElementById("teacher-login").classList.remove("hidden");
+}
+
+function loginTeacher() {
+    if (document.getElementById("pass").value !== "1234") {
+        alert("Sai mật khẩu!");
+        return;
+    }
+    role = "teacher";
+    startApp();
+}
+
+function enterParent() {
+    role = "parent";
+    startApp();
+}
+
+function startApp() {
+    document.getElementById("teacher-login").classList.add("hidden");
+    document.getElementById("main").classList.remove("hidden");
+    document.getElementById("roleTitle").innerText =
+        role === "teacher" ? "Chế độ giáo viên" : "Chế độ phụ huynh";
+
+    renderStudents();
+}
+
+function renderStudents() {
+    const box = document.getElementById("studentList");
+    box.innerHTML = "";
+
+    students.forEach(s => {
+        const col = document.createElement("div");
+
+        // Responsive: mobile 6 col → tablet 4 → PC 3 → large PC 2
+        col.className = "col-6 col-md-4 col-lg-3 col-xl-2 mb-4";
+
+        col.innerHTML = `
+            <div class="card p-3 student-card text-center">
+                <img src="./HS${s.id}.png">
+                <h6>${s.name}</h6>
+                <div id="status-${s.id}" class="status-text text-${s.status ? 'success' : 'secondary'}">
+                    ${s.status ? "Đã về: " + s.status : "Chưa về"}
+                </div>
+            </div>
+        `;
+
+        // Thêm nút nếu là giáo viên
+        if (role === "teacher") {
+            const btn = document.createElement("button");
+            btn.className = "btn btn-sm btn-primary mt-2 w-100";
+            btn.textContent = s.status ? "Xóa trạng thái" : "Đánh dấu đã về";
+            btn.onclick = () => toggleStudent(s.id);
+
+            col.querySelector(".card").appendChild(btn);
+        }
+
+        box.appendChild(col);
+    });
+}
+
+function toggleStudent(id) {
+    const st = students.find(s => s.id === id);
+
+    st.status = st.status ? "" : new Date().toLocaleTimeString();
+
+    renderStudents();
+
+    ws.send(JSON.stringify({
+        type: "update",
+        student: st
+    }));
+}
+
+function handleIncoming(stu) {
+    const st = students.find(s => s.id === stu.id);
+    st.status = stu.status;
+
+    const dom = document.getElementById("status-" + st.id);
+    if (dom) {
+        dom.innerText = st.status ? "Đã về: " + st.status : "Chưa về";
+        dom.classList.remove("text-secondary", "text-success");
+        dom.classList.add(st.status ? "text-success" : "text-secondary");
+    }
+}
+</script>
+
+</body>
+</html>
