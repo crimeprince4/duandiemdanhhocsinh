@@ -55,7 +55,6 @@
 
 
 <script>
-// Kết nối WebSocket PieSocket
 const ws = new WebSocket("wss://s15498.sgp1.piesocket.com/v3/1?api_key=okoWbl3aPzw8eI7MfLR3oktCFWVh2Bj4foB5EGnB&notify_self=1");
 
 ws.onopen = () => console.log("Đã kết nối WebSocket PieSocket");
@@ -70,7 +69,6 @@ ws.onmessage = e => {
 };
 
 
-// Tạo danh sách học sinh
 const students = [];
 for (let i = 1; i <= 10; i++) {
     students.push({
@@ -116,8 +114,7 @@ function renderStudents() {
     students.forEach(s => {
         const col = document.createElement("div");
 
-        // Responsive: mobile 6 col → tablet 4 → PC 3 → large PC 2
-        col.className = "col-6 col-md-4 col-lg-3 col-xl-2 mb-4";
+        col.className = "col-6 col-sm-6 col-md-6 col-lg-3 mb-4";
 
         col.innerHTML = `
             <div class="card p-3 student-card text-center">
@@ -129,7 +126,6 @@ function renderStudents() {
             </div>
         `;
 
-        // Thêm nút nếu là giáo viên
         if (role === "teacher") {
             const btn = document.createElement("button");
             btn.className = "btn btn-sm btn-primary mt-2 w-100";
